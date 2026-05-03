@@ -18,6 +18,7 @@ import {
     fetchChubMetadata,
     fetchChubLinkedLorebook,
     buildCharacterCardFromChub,
+    normalizeChubTopics,
 } from './chub-api.js';
 
 let api = null; // CoreAPI reference
@@ -718,6 +719,13 @@ class ChubProvider extends ProviderBase {
             };
 
             assignGalleryId(characterCard, options, api);
+
+            // If metadata produced no tags but the browse search result (hitData) has
+            // topics, use those as a fallback.  The search API reliably returns topics as
+            // plain strings while the metadata endpoint may omit them or return objects.
+            if (!characterCard.data.tags?.length && hitData?.topics?.length) {
+                characterCard.data.tags = normalizeChubTopics(hitData.topics);
+            }
 
             // Avatar download — priority chain
             const imageUrls = [];

@@ -34,6 +34,30 @@ function debugLog(...args) {
 }
 
 // ========================================
+// HELPERS
+// ========================================
+
+/**
+ * Normalize a Chub topics array to plain strings.
+ * The REST search endpoint returns topics as plain strings, but the
+ * character metadata endpoint (/api/characters/{path}?full=true) can
+ * return them as objects like { name, slug, id }.  This helper handles
+ * both so the rest of the import pipeline always works with strings.
+ * @param {Array} topics
+ * @returns {string[]}
+ */
+export function normalizeChubTopics(topics) {
+    if (topics == null || !Array.isArray(topics)) return [];
+    return topics
+        .map(t => {
+            if (typeof t === 'string') return t.trim();
+            if (t && typeof t === 'object') return (t.name ?? t.slug ?? '').trim();
+            return '';
+        })
+        .filter(Boolean);
+}
+
+// ========================================
 // NETWORK
 // ========================================
 
@@ -127,7 +151,7 @@ export async function fetchChubMetadata(fullPath) {
                 id: result.id,
                 name: result.name,
                 fullPath: result.fullPath,
-                topics: result.topics,
+                topics: normalizeChubTopics(result.topics),
                 tagline: result.tagline,
                 avatar_url: result.avatar_url,
                 max_res_url: result.max_res_url,
@@ -277,7 +301,7 @@ export async function buildCharacterCardFromChub(apiData) {
             system_prompt: def.system_prompt || '',
             post_history_instructions: def.post_history_instructions || '',
             alternate_greetings: def.alternate_greetings || [],
-            tags: apiData.topics || [],
+            tags: normalizeChubTopics(apiData.topics),
             creator: apiData.fullPath?.split('/')[0] || '',
             character_version: def.character_version || '',
             extensions: {
