@@ -1,6 +1,6 @@
-const EXTENSION_NAME = "Character Library";
-const EXTENSION_DIR = "SillyTavern-CharacterLibrary";
-const CL_SETTINGS_KEY = 'SillyTavernCharacterGallery';
+const EXTENSION_NAME = "Character Library Unofficial";
+const EXTENSION_DIR = "SillyTavern-CharacterLibrary-Unof";
+const CL_SETTINGS_KEY = 'SillyTavernCharacterGalleryU';
 
 // Helper to get the correct path for this extension
 function getExtensionUrl() {
