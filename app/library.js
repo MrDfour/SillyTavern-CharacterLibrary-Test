@@ -15285,6 +15285,33 @@ async function importLocalCharacter(file) {
     }
 }
 
+/**
+ * Apply tags extracted from a character card's spec data to the character
+ * in SillyTavern's tag system via the merge-attributes API.
+ * Called after a successful import to persist the card's `data.tags` locally.
+ * @param {string} avatar - The character's avatar filename (e.g. "MyChar.png")
+ * @param {Array<string>} tags - Tags from the imported card's data.tags field
+ * @returns {Promise<boolean>} true if tags were saved successfully
+ */
+async function applyCardTagsToCharacter(avatar, tags) {
+    if (!avatar || !Array.isArray(tags) || tags.length === 0) return 0;
+    const cleanTags = tags.filter(t => typeof t === 'string' && t.trim()).map(t => t.trim());
+    if (cleanTags.length === 0) return 0;
+    try {
+        // Both root-level `tags` and `data.tags` are required: ST's tag DB reads the root
+        // field while the character card spec stores them under `data`.
+        const response = await apiRequest('/characters/merge-attributes', 'POST', {
+            avatar,
+            tags: cleanTags,
+            data: { tags: cleanTags }
+        });
+        return response.ok ? cleanTags.length : 0;
+    } catch (e) {
+        console.warn('[Import] Failed to apply tags from card:', e);
+        return 0;
+    }
+}
+
 // Calculate CRC32 for PNG chunks
 function crc32(data) {
     let crc = -1;
@@ -15879,6 +15906,17 @@ startImportBtn?.addEventListener('click', async () => {
             if (importSourceMode === 'url') batchImportedIds.add(`${item.provider.id}:${String(item.identifier).toLowerCase()}`);
             updateStats();
             updateLogEntry(logEntry, `${displayName} imported successfully`, 'success');
+
+            // Apply tags from the card spec to the character's local tag list
+            const cardTags = result.cardData?.tags;
+            if (result.fileName && Array.isArray(cardTags) && cardTags.length > 0) {
+                try {
+                    const appliedCount = await applyCardTagsToCharacter(result.fileName, cardTags);
+                    if (appliedCount > 0) debugLog(`[Import] Applied ${appliedCount} tag(s) to ${result.characterName}`);
+                } catch (e) {
+                    debugLog('[Import] Tag application failed (non-critical):', e);
+                }
+            }
             
             // Determine folder name for media downloads
             let folderName;
